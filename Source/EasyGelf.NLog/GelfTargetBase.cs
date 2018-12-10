@@ -107,7 +107,7 @@ namespace EasyGelf.NLog
 		        var msg = messageBuilder.ToMessage();
 		        if (!string.IsNullOrEmpty(msg.ShortMessage))
 		        {
-			        transport.Send(messageBuilder.ToMessage());
+			        transport.Send(msg);
 		        }
 	        }
 	        catch (Exception exception)
