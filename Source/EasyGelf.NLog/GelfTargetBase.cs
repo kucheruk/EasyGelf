@@ -55,58 +55,65 @@ namespace EasyGelf.NLog
 
         protected override void Write(LogEventInfo loggingEvent)
         {
-            try
-            {
-                var renderedEvent = Layout.Render(loggingEvent);
-                var messageBuilder = new GelfMessageBuilder(renderedEvent, HostName, loggingEvent.TimeStamp, ToGelf(loggingEvent.Level))
-                    .SetAdditionalField("facility", Facility)
-                    .SetAdditionalField("loggerName", loggingEvent.LoggerName)
-                    .SetAdditionalField("sequenceId", loggingEvent.SequenceID.ToString());
-                if (IncludeSource)
-                {
-                    var userStackFrame = loggingEvent.UserStackFrame;
-                    if (userStackFrame != null)
-                    {
-                        messageBuilder.SetAdditionalField("sourceFileName", userStackFrame.GetFileName());
-                        messageBuilder.SetAdditionalField("sourceLineNumber", userStackFrame.GetFileLineNumber().ToString(CultureInfo.InvariantCulture));
-                    }
-                }
-                if (IncludeStackTrace)
-                {
-                    var exception = loggingEvent.Exception;
-                    if (exception != null)
-                    {
-                        messageBuilder.SetAdditionalField("exceptionType", exception.GetType().FullName);
-                        messageBuilder.SetAdditionalField("exceptionMessage", exception.Message);
-                        messageBuilder.SetAdditionalField("exceptionStackTrace", exception.StackTrace);
-                    }
-                }
+	        try
+	        {
+		        var renderedEvent = Layout.Render(loggingEvent);
+		        var messageBuilder = new GelfMessageBuilder(renderedEvent, HostName, loggingEvent.TimeStamp,
+				        ToGelf(loggingEvent.Level))
+			        .SetAdditionalField("facility", Facility)
+			        .SetAdditionalField("loggerName", loggingEvent.LoggerName)
+			        .SetAdditionalField("sequenceId", loggingEvent.SequenceID.ToString());
+		        if (IncludeSource)
+		        {
+			        var userStackFrame = loggingEvent.UserStackFrame;
+			        if (userStackFrame != null)
+			        {
+				        messageBuilder.SetAdditionalField("sourceFileName", userStackFrame.GetFileName());
+				        messageBuilder.SetAdditionalField("sourceLineNumber",
+					        userStackFrame.GetFileLineNumber().ToString(CultureInfo.InvariantCulture));
+			        }
+		        }
 
-				foreach (var parameter in Parameters)
-				{
-					var value = parameter.Layout.Render(loggingEvent);
-				    if (string.IsNullOrWhiteSpace(value))
-				    {
+		        if (IncludeStackTrace)
+		        {
+			        var exception = loggingEvent.Exception;
+			        if (exception != null)
+			        {
+				        messageBuilder.SetAdditionalField("exceptionType", exception.GetType().FullName);
+				        messageBuilder.SetAdditionalField("exceptionMessage", exception.Message);
+				        messageBuilder.SetAdditionalField("exceptionStackTrace", exception.StackTrace);
+			        }
+		        }
+
+		        foreach (var parameter in Parameters)
+		        {
+			        var value = parameter.Layout.Render(loggingEvent);
+			        if (string.IsNullOrWhiteSpace(value))
+			        {
 				        continue;
-				    }
+			        }
 
-				    messageBuilder.SetAdditionalField(parameter.Name, value);
-				}
+			        messageBuilder.SetAdditionalField(parameter.Name, value);
+		        }
 
-				if(IncludeEventProperties)
-				{
-					foreach(var property in loggingEvent.Properties)
-					{
-						messageBuilder.SetAdditionalField(property.Key.ToString(), property.Value?.ToString());
-					}
-				}
+		        if (IncludeEventProperties)
+		        {
+			        foreach (var property in loggingEvent.Properties)
+			        {
+				        messageBuilder.SetAdditionalField(property.Key.ToString(), property.Value?.ToString());
+			        }
+		        }
 
-                transport.Send(messageBuilder.ToMessage());
-            }
-            catch (Exception exception)
-            {
-                logger.Error("Failed to send message", exception);
-            }
+		        var msg = messageBuilder.ToMessage();
+		        if (!string.IsNullOrEmpty(msg.ShortMessage))
+		        {
+			        transport.Send(messageBuilder.ToMessage());
+		        }
+	        }
+	        catch (Exception exception)
+	        {
+		        logger.Error("Failed to send message", exception);
+	        }
         }
 
         protected override void InitializeTarget()
